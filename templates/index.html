@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <!-- Monthly Budget Card -->
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">📅 Monthly Budget</h5>
+                <form method="POST" action="{{ url_for('set_budget') }}" class="d-flex gap-2">
+                    <input type="number" step="0.01" name="budget" class="form-control" value="{{ stats.budget }}" placeholder="Enter amount in PKR">
+                    <button type="submit" class="btn btn-primary">Set</button>
+                </form>
+                <hr>
+                <h3 class="text-primary">PKR {{ stats.budget }}</h3>
+                <small>Your monthly income</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Spent & Remaining -->
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">💸 This month</h5>
+                <p><strong>Spent:</strong> PKR {{ stats.total_spent }}</p>
+                <p><strong>Remaining:</strong> 
+                    <span class="{% if stats.remaining < 0 %}text-danger{% else %}text-success{% endif %}">
+                        PKR {{ stats.remaining }}
+                    </span>
+                </p>
+                <p><strong>Savings:</strong> PKR {{ stats.savings }}</p>
+                {% if stats.overspent > 0 %}
+                    <p class="text-danger">⚠️ Overspent by PKR {{ stats.overspent }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Pie Chart Card -->
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">📊 Spending by Category</h5>
+                <canvas id="expenseChart" width="200" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Transactions List -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between">
+        <span>📋 Transactions ({{ stats.start_date.strftime('%b %d') }} – {{ stats.end_date.strftime('%b %d, %Y') }})</span>
+        <a href="{{ url_for('add_expense') }}" class="btn btn-sm btn-success">+ Add Expense</a>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr><th>Date</th><th>Category</th><th>Description</th><th>Amount (PKR)</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+                {% for exp in stats.expenses %}
+                <tr>
+                    <td>{{ exp.date.strftime('%Y-%m-%d') }}</td>
+                    <td>{{ exp.category }}</td>
+                    <td>{{ exp.description or '-' }}</td>
+                    <td>{{ exp.amount }}</td>
+                    <td>
+                        <a href="{{ url_for('edit_expense', id=exp.id) }}" class="btn btn-sm btn-warning">✏️</a>
+                        <a href="{{ url_for('delete_expense', id=exp.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Delete?')">🗑️</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" class="text-center">No expenses yet. Add one!</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const ctx = document.getElementById('expenseChart').getContext('2d');
+    const categoryTotals = {{ category_totals | tojson }};
+    new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: Object.keys(categoryTotals),
+            datasets: [{
+                data: Object.values(categoryTotals),
+                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40']
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: true }
+    });
+</script>
+{% endblock %}
